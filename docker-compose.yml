@@ -24,7 +24,7 @@ services:
       - external
 
   cbackup-web:
-    image: rafaelcdesouza/cbackup-web:0.1.2
+    image: rafaelcdesouza/cbackup-web:0.1.3
     build:
       context: .
       dockerfile: docker/web/Dockerfile
@@ -65,7 +65,7 @@ services:
       - external
 
   cbackup-daemon:
-    image: rafaelcdesouza/cbackup-daemon:0.1.0
+    image: rafaelcdesouza/cbackup-daemon:0.1.3
     container_name: cbackup-daemon
     restart: unless-stopped
     depends_on:
