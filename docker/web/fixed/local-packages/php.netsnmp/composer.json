@@ -1,0 +1,8 @@
+{
+  "name": "dautkom/php.netsnmp",
+  "version": "1.0.1",
+  "type": "library",
+  "autoload": {
+    "classmap": ["src/"]
+  }
+}

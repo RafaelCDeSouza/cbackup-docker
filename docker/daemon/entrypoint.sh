@@ -18,4 +18,12 @@ until nc -z "${DB_HOST:-cbackup-db}" "${DB_PORT:-3306}"; do
   sleep 2
 done
 
+chmod 777 "$CBACKUP_HOME/data" || true
+chmod 777 "$CBACKUP_HOME/git" || true
+chmod 777 "$CBACKUP_HOME/bin" || true
+
+if [ -f "$CBACKUP_HOME/bin/cbackup.jar" ]; then
+  chmod 555 "$CBACKUP_HOME/bin/cbackup.jar" || true
+fi
+
 exec "$@"

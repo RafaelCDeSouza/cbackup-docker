@@ -16,15 +16,21 @@ services:
     volumes:
       - cbackup_db:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent" ]
       interval: 10s
       timeout: 5s
       retries: 30
     networks:
-      - cbackup-net
+      - external
 
   cbackup-web:
-    image: rafaelcdesouza/cbackup-web:0.1.0
+    image: rafaelcdesouza/cbackup-web:0.1.2
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      args:
+        CBACKUP_CORE_REPO: ${CBACKUP_CORE_REPO:-https://github.com/cBackup/core.git}
+        CBACKUP_CORE_BRANCH: ${CBACKUP_CORE_BRANCH:-master}
     container_name: cbackup-web
     restart: unless-stopped
     depends_on:
@@ -39,6 +45,7 @@ services:
       DB_NAME: ${MYSQL_DATABASE:-cbackup}
       DB_USER: ${MYSQL_USER:-cbackup}
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
       CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
     volumes:
       - cbackup_web_runtime:/opt/cbackup/runtime
@@ -46,9 +53,16 @@ services:
       - cbackup_data:/opt/cbackup/data
       - cbackup_logs:/var/log/cbackup
       - cbackup_git:/opt/cbackup/git
-      - cbackup_bin:/opt/cbackup/bin        
+      - cbackup_bin:/opt/cbackup/bin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cbackup.entrypoints=web,web-secure"
+      - "traefik.http.routers.cbackup.rule=Host(`cbackup.rafaelcdesouza.io`)"
+      - "traefik.http.routers.cbackup.tls=true"
+      - "traefik.http.routers.cbackup.middlewares=secHeaders@file"
+      - "traefik.http.services.cbackup.loadbalancer.server.port=80"
     networks:
-      - cbackup-net
+      - external
 
   cbackup-daemon:
     image: rafaelcdesouza/cbackup-daemon:0.1.0
@@ -69,10 +83,10 @@ services:
     volumes:
       - cbackup_data:/opt/cbackup/data
       - cbackup_logs:/var/log/cbackup
-      - cbackup_git:/opt/cbackup/giti
-      - cbackup_bin:/opt/cbackup/bin      
+      - cbackup_git:/opt/cbackup/git
+      - cbackup_bin:/opt/cbackup/bin
     networks:
-      - cbackup-net
+      - external
 
 volumes:
   cbackup_db:
@@ -84,5 +98,5 @@ volumes:
   cbackup_bin:
 
 networks:
-  cbackup-net:
-    driver: bridge
+  external:
+    external: true
