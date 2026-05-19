@@ -1,0 +1,88 @@
+services:
+  cbackup-db:
+    image: mariadb:10.6
+    container_name: cbackup-db
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8
+      - --collation-server=utf8_general_ci
+      - --sql-mode=
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cbackup}
+      MYSQL_USER: ${MYSQL_USER:-cbackup}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
+    volumes:
+      - cbackup_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - cbackup-net
+
+  cbackup-web:
+    image: rafaelcdesouza/cbackup-web:0.1.0
+    container_name: cbackup-web
+    restart: unless-stopped
+    depends_on:
+      cbackup-db:
+        condition: service_healthy
+    ports:
+      - "${CBACKUP_HTTP_PORT:-8080}:80"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      DB_HOST: cbackup-db
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-cbackup}
+      DB_USER: ${MYSQL_USER:-cbackup}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
+      CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
+    volumes:
+      - cbackup_web_runtime:/opt/cbackup/runtime
+      - cbackup_web_assets:/opt/cbackup/web/assets
+      - cbackup_data:/opt/cbackup/data
+      - cbackup_logs:/var/log/cbackup
+      - cbackup_git:/opt/cbackup/git
+      - cbackup_bin:/opt/cbackup/bin        
+    networks:
+      - cbackup-net
+
+  cbackup-daemon:
+    image: rafaelcdesouza/cbackup-daemon:0.1.0
+    container_name: cbackup-daemon
+    restart: unless-stopped
+    depends_on:
+      cbackup-db:
+        condition: service_healthy
+    ports:
+      - "${CBACKUP_DAEMON_SSH_PORT:-8437}:8437"
+    environment:
+      TZ: ${TZ:-America/Sao_Paulo}
+      DB_HOST: cbackup-db
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE:-cbackup}
+      DB_USER: ${MYSQL_USER:-cbackup}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
+    volumes:
+      - cbackup_data:/opt/cbackup/data
+      - cbackup_logs:/var/log/cbackup
+      - cbackup_git:/opt/cbackup/giti
+      - cbackup_bin:/opt/cbackup/bin      
+    networks:
+      - cbackup-net
+
+volumes:
+  cbackup_db:
+  cbackup_web_runtime:
+  cbackup_web_assets:
+  cbackup_data:
+  cbackup_logs:
+  cbackup_git:
+  cbackup_bin:
+
+networks:
+  cbackup-net:
+    driver: bridge
