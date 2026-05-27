@@ -47,8 +47,14 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
       CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        [ -f /opt/cbackup/config/.installed ] && touch /opt/cbackup/install.lock || true
+        exec cbackup-web-entrypoint "$@"
+      - --
     volumes:
-      - ./docker/web/entrypoint.sh:/usr/local/bin/cbackup-web-entrypoint
       - ./docker/web/config-data:/opt/cbackup/config
       - cbackup_web_runtime:/opt/cbackup/runtime
       - cbackup_web_assets:/opt/cbackup/web/assets
