@@ -47,15 +47,15 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
       CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
+      CBACKUP_COOKIE_KEY: ${CBACKUP_COOKIE_KEY:-}
     entrypoint:
       - /bin/bash
       - -c
-      - |
-        [ -f /opt/cbackup/config/.installed ] && touch /opt/cbackup/install.lock || true
-        exec cbackup-web-entrypoint "$@"
-      - --
+      - >-
+        ln -sf /opt/cbackup/runtime/.install.lock /opt/cbackup/install.lock 2>/dev/null || true;
+        exec cbackup-web-entrypoint apache2-foreground
     volumes:
-      - ./docker/web/config-data:/opt/cbackup/config
+      - cbackup_config:/opt/cbackup/config
       - cbackup_web_runtime:/opt/cbackup/runtime
       - cbackup_web_assets:/opt/cbackup/web/assets
       - cbackup_data:/opt/cbackup/data
@@ -98,6 +98,7 @@ services:
 
 volumes:
   cbackup_db:
+  cbackup_config:
   cbackup_web_runtime:
   cbackup_web_assets:
   cbackup_data:

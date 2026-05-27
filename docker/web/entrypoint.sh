@@ -118,6 +118,23 @@ PHP
 
 echo "Database ${DB_NAME:-cbackup} validado."
 
+# Garante que settings.ini existe no volume de config (gerado a partir de env var).
+# Isso evita perder o cookieValidationKey ao recriar o container.
+if [ ! -f "$CBACKUP_HOME/config/settings.ini" ] && [ -n "${CBACKUP_COOKIE_KEY:-}" ]; then
+  cat > "$CBACKUP_HOME/config/settings.ini" <<INI
+cookieValidationKey = "${CBACKUP_COOKIE_KEY}"
+defaultTimeZone = "${TZ:-UTC}"
+serviceType = "system.d"
+INI
+  chown www-data:www-data "$CBACKUP_HOME/config/settings.ini" || true
+  chmod 640 "$CBACKUP_HOME/config/settings.ini" || true
+fi
+
+# install.lock aponta para o volume runtime/ para sobreviver a recreações do container.
+# O instalador cria/verifica o lock em $CBACKUP_HOME/install.lock; o symlink redireciona
+# para o volume nomeado que persiste entre recreações.
+ln -sf "$CBACKUP_HOME/runtime/.install.lock" "$CBACKUP_HOME/install.lock" 2>/dev/null || true
+
 # Volumes compartilhados podem vir com UID/GID diferente.
 # O instalador exige escrita nos diretórios data e bin.
 chmod 777 "$CBACKUP_HOME/data" || true
