@@ -184,6 +184,25 @@ SQL
 
 echo "Database ${DB_NAME:-cbackup} validado."
 
+# Se install.lock não existe mas o DB já está instalado (tem tabelas), recriar o lock.
+# Isso evita que ao recriar o container a aplicação volte para a tela de install.
+if [ ! -f "$CBACKUP_HOME/install.lock" ]; then
+  TABLE_COUNT=$(mysql \
+    -h"${DB_HOST:-cbackup-db}" \
+    -P"${DB_PORT:-3306}" \
+    -u"${DB_USER:-cbackup}" \
+    -p"${DB_PASSWORD:-cbackup_pass}" \
+    "${DB_NAME:-cbackup}" \
+    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME:-cbackup}';" \
+    --skip-column-names 2>/dev/null || echo "0")
+  if [ "${TABLE_COUNT:-0}" -gt 5 ] 2>/dev/null; then
+    echo "DB já instalado ($TABLE_COUNT tabelas). Recriando install.lock..."
+    touch "$CBACKUP_HOME/install.lock"
+    chown www-data:www-data "$CBACKUP_HOME/install.lock" || true
+    chmod 444 "$CBACKUP_HOME/install.lock" || true
+  fi
+fi
+
 # Volumes compartilhados podem vir com UID/GID diferente.
 # O instalador exige escrita nos diretórios data e bin.
 chmod 777 "$CBACKUP_HOME/data" || true
