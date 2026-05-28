@@ -55,6 +55,10 @@ chmod 1777 /var/lib/php/sessions || true
 chown www-data:www-data "$CBACKUP_HOME/bin" || true
 chmod 775 "$CBACKUP_HOME/bin" || true
 
+mkdir -p "$CBACKUP_HOME/modules/cds/content"
+chown -R www-data:www-data "$CBACKUP_HOME/modules/cds/content" || true
+chmod -R 775 "$CBACKUP_HOME/modules/cds/content" || true
+
 if [ -f "$CBACKUP_HOME/bin/cbackup.jar" ]; then
   chown www-data:www-data "$CBACKUP_HOME/bin/cbackup.jar" || true
   chmod 555 "$CBACKUP_HOME/bin/cbackup.jar" || true
@@ -117,6 +121,32 @@ return [
 PHP
 
 echo "Database ${DB_NAME:-cbackup} validado."
+
+# Sync Docker env vars into cBackup's config table on every startup.
+# The web installer prompts the user for daemon settings, but in Docker those
+# values must always match the env vars — this block enforces that without
+# requiring manual form-filling during installation.
+_db_exec() {
+  mysql \
+    -h"${DB_HOST:-cbackup-db}" \
+    -P"${DB_PORT:-3306}" \
+    -uroot \
+    -p"${MYSQL_ROOT_PASSWORD:-root_pass}" \
+    "${DB_NAME:-cbackup}" \
+    -e "$1" 2>/dev/null
+}
+
+if _db_exec "SHOW TABLES LIKE 'config';" | grep -q config; then
+  _db_exec "UPDATE config SET value = '${JAVA_HOST:-cbackup-daemon}'     WHERE \`key\` = 'javaHost';"
+  _db_exec "UPDATE config SET value = '${JAVA_SCHEDULER_USER:-cbadmin}'  WHERE \`key\` = 'javaSchedulerUsername';"
+  _db_exec "UPDATE config SET value = '${JAVA_SCHEDULER_PASS:-cbackup}'  WHERE \`key\` = 'javaSchedulerPassword';"
+  _db_exec "UPDATE config SET value = '${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}' WHERE \`key\` = 'javaServerPassword';"
+  if [ -n "${CBACKUP_TOKEN:-}" ]; then
+    _db_exec "UPDATE user SET access_token = '${CBACKUP_TOKEN}' WHERE userid = 'JAVACORE';"
+  fi
+  rm -rf "${CBACKUP_HOME}/runtime/cache/" 2>/dev/null || true
+  echo "Configurações do daemon sincronizadas com variáveis de ambiente."
+fi
 
 # Write Apache vhost — ensures the root-path rewrite (/?r=...) for the Java
 # daemon API calls survives container recreations and image rebuilds.

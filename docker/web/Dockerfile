@@ -100,6 +100,7 @@ RUN mkdir -p ${CBACKUP_HOME}/runtime \
     ${CBACKUP_HOME}/web/install/assets \
     ${CBACKUP_HOME}/data \
     ${CBACKUP_HOME}/git \
+    ${CBACKUP_HOME}/modules/cds/content \
     /var/log/cbackup \
     /var/lib/php/sessions \
     && chmod -R 775 \

@@ -24,13 +24,13 @@ services:
       - external
 
   cbackup-web:
-    image: rafaelcdesouza/cbackup-web:0.1.4
-    # build:
+    image: rafaelcdesouza/cbackup-web:0.1.5
+    build:
     #   context: .
-    #   dockerfile: docker/web/Dockerfile
-    #   args:
-    #     CBACKUP_CORE_REPO: ${CBACKUP_CORE_REPO:-https://github.com/cBackup/core.git}
-    #     CBACKUP_CORE_BRANCH: ${CBACKUP_CORE_BRANCH:-master}
+      dockerfile: docker/web/Dockerfile
+      args:
+        CBACKUP_CORE_REPO: ${CBACKUP_CORE_REPO:-https://github.com/cBackup/core.git}
+        CBACKUP_CORE_BRANCH: ${CBACKUP_CORE_BRANCH:-master}
     container_name: cbackup-web
     restart: unless-stopped
     depends_on:
@@ -48,6 +48,10 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
       CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
       CBACKUP_COOKIE_KEY: ${CBACKUP_COOKIE_KEY:-}
+      JAVA_HOST: cbackup-daemon
+      JAVA_SCHEDULER_USER: ${JAVA_SCHEDULER_USER:-cbadmin}
+      JAVA_SCHEDULER_PASS: ${JAVA_SCHEDULER_PASS:-cbackup}
+      CBACKUP_TOKEN: ${CBACKUP_TOKEN:-}
     entrypoint:
       - /bin/bash
       - -c
@@ -73,7 +77,7 @@ services:
       - external
 
   cbackup-daemon:
-    image: rafaelcdesouza/cbackup-daemon:0.1.4
+    image: rafaelcdesouza/cbackup-daemon:0.1.5
     # build:
     #   context: .
     #   dockerfile: docker/daemon/Dockerfile
