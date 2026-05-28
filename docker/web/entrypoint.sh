@@ -222,7 +222,10 @@ ln -sf "$CBACKUP_HOME/runtime/.install.lock" "$CBACKUP_HOME/install.lock" 2>/dev
 
 # Volumes compartilhados podem vir com UID/GID diferente.
 # O instalador exige escrita nos diretórios data e bin.
+# find garante que subdiretórios criados pelo daemon (UID 1000) fiquem
+# acessíveis à web (www-data/33) mesmo após recreações de container.
 chmod 777 "$CBACKUP_HOME/data" || true
+find "$CBACKUP_HOME/data" -type d -exec chmod 777 {} + 2>/dev/null || true
 chmod 777 "$CBACKUP_HOME/bin" || true
 
 if [ -f "$CBACKUP_HOME/bin/cbackup.jar" ]; then
