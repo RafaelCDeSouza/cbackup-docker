@@ -24,7 +24,7 @@ services:
       - external
 
   cbackup-web:
-    image: rafaelcdesouza/cbackup-web:0.1.3
+    image: rafaelcdesouza/cbackup-web:0.1.4
     # build:
     #   context: .
     #   dockerfile: docker/web/Dockerfile
@@ -73,7 +73,13 @@ services:
       - external
 
   cbackup-daemon:
-    image: rafaelcdesouza/cbackup-daemon:0.1.3
+    image: rafaelcdesouza/cbackup-daemon:0.1.4
+    # build:
+    #   context: .
+    #   dockerfile: docker/daemon/Dockerfile
+    #   args:
+    #     CBACKUP_WORKER_REPO: ${CBACKUP_WORKER_REPO:-https://github.com/cBackup/worker.git}
+    #     CBACKUP_WORKER_BRANCH: ${CBACKUP_WORKER_BRANCH:-master}
     container_name: cbackup-daemon
     restart: unless-stopped
     depends_on:
@@ -91,6 +97,13 @@ services:
       CBACKUP_SCHEME: ${CBACKUP_SCHEME:-http}
       CBACKUP_SITE: ${CBACKUP_SITE:-cbackup-web}
       CBACKUP_TOKEN: ${CBACKUP_TOKEN:-}
+      CBACKUP_SSH_ROOT_PASSWORD: ${CBACKUP_SSH_ROOT_PASSWORD:-cbackup}
+      # Embedded SSH server (sshd-shell-spring-boot-starter) — porta 8437
+      SSHD_SHELL_ENABLED: "true"
+      SSHD_SHELL_PORT: "8437"
+      SSHD_SHELL_HOST: "0.0.0.0"
+      SSHD_SHELL_USERNAME: ${JAVA_SCHEDULER_USER:-cbadmin}
+      SSHD_SHELL_PASSWORD: ${JAVA_SCHEDULER_PASS:-cbackup}
     volumes:
       - cbackup_data:/opt/cbackup/data
       - cbackup_logs:/var/log/cbackup

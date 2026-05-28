@@ -118,6 +118,61 @@ PHP
 
 echo "Database ${DB_NAME:-cbackup} validado."
 
+# Write Apache vhost — ensures the root-path rewrite (/?r=...) for the Java
+# daemon API calls survives container recreations and image rebuilds.
+cat > /etc/apache2/sites-enabled/000-default.conf <<'VHOSTEOF'
+<VirtualHost *:80>
+    ServerName localhost
+    DocumentRoot /opt/cbackup/web
+
+    RewriteEngine On
+
+    RewriteCond %{THE_REQUEST} "\.\."
+    RewriteRule ^ - [F,L]
+
+    RedirectMatch 403 "(?i).*(README\.md|yii\.bat|schema\.sql|cbackup\.jar)$"
+    RedirectMatch 403 "(?i).*(composer\.json|composer\.lock|\.env|\.git|vendor|runtime|config|bin).*"
+
+    <Directory />
+        Require all denied
+    </Directory>
+
+    <Directory /opt/cbackup>
+        Options -Indexes
+        AllowOverride None
+        Require all denied
+    </Directory>
+
+    <Directory /opt/cbackup/web>
+        Options -Indexes +FollowSymLinks
+        AllowOverride None
+        Require all granted
+
+        RewriteEngine On
+
+        RewriteCond %{THE_REQUEST} "\.\." [OR]
+        RewriteCond %{REQUEST_URI} "\.\."
+        RewriteRule ^ - [F,L]
+
+        # Daemon API calls use /?r=route (root path without index.php).
+        # Rewrite to index.php so Yii routes them through the v1 module.
+        RewriteCond %{REQUEST_URI} ^/?$
+        RewriteRule ^ index.php [L,QSA,E=API_ROOT:1]
+
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . index.php [L]
+    </Directory>
+
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+
+    ErrorLog ${APACHE_LOG_DIR}/cbackup-error.log
+    CustomLog ${APACHE_LOG_DIR}/cbackup-access.log combined
+</VirtualHost>
+VHOSTEOF
+
 # Garante que settings.ini existe no volume de config (gerado a partir de env var).
 # Isso evita perder o cookieValidationKey ao recriar o container.
 if [ ! -f "$CBACKUP_HOME/config/settings.ini" ] && [ -n "${CBACKUP_COOKIE_KEY:-}" ]; then

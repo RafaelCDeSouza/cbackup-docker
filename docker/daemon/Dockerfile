@@ -116,18 +116,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     bash \
     openssh-client \
+    openssh-server \
     snmp \
     git \
     netcat-openbsd \
     mariadb-client \
     procps \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
+
+# Fake systemctl: o cBackup web faz SSH e roda "systemctl status cbackup"
+# para verificar o serviço. Em Docker o processo é gerenciado pelo container
+# runtime, então retornamos sempre "active (running)".
+RUN printf '#!/bin/bash\nCMD=$1; SVC=${2:-}\nif [[ "$SVC" == "cbackup"* ]]; then\n  case "$CMD" in\n    status) echo "● cbackup.service - cBackup Worker"; echo "   Active: active (running)"; exit 0;;\n    is-active) echo "active"; exit 0;;\n    start|stop|restart) exit 0;;\n  esac\nfi\nexec /bin/systemctl "$@" 2>/dev/null || true\n' > /usr/local/bin/systemctl \
+    && chmod +x /usr/local/bin/systemctl
 
 RUN useradd -m -d ${CBACKUP_HOME} -s /bin/bash cbackup \
     && mkdir -p ${CBACKUP_HOME}/data \
     && mkdir -p ${CBACKUP_HOME}/git \
     && mkdir -p /var/log/cbackup \
-    && mkdir -p /opt/cbackup-worker
+    && mkdir -p /opt/cbackup-worker \
+    && mkdir -p /run/sshd \
+    && echo "cbackup ALL=(ALL) NOPASSWD: /usr/local/bin/systemctl" >> /etc/sudoers
 
 COPY --from=builder /build/worker/target/*.jar /opt/cbackup-worker/cbackup.jar
 

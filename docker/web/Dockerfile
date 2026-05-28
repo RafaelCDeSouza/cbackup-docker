@@ -81,6 +81,7 @@ RUN sed -i 's#bower-asset/blockUI#bower-asset/blockui#g' composer.json composer.
 COPY docker/web/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/web/php.ini /usr/local/etc/php/conf.d/99-cbackup.ini
 COPY docker/web/entrypoint.sh /usr/local/bin/cbackup-web-entrypoint
+COPY docker/web/fixed/web.php ${CBACKUP_HOME}/config/web.php
 
 RUN mkdir -p ${CBACKUP_HOME}/runtime \
     ${CBACKUP_HOME}/web/assets \
