@@ -88,6 +88,9 @@ services:
       DB_NAME: ${MYSQL_DATABASE:-cbackup}
       DB_USER: ${MYSQL_USER:-cbackup}
       DB_PASSWORD: ${MYSQL_PASSWORD:-cbackup_pass}
+      CBACKUP_SCHEME: ${CBACKUP_SCHEME:-http}
+      CBACKUP_SITE: ${CBACKUP_SITE:-cbackup-web}
+      CBACKUP_TOKEN: ${CBACKUP_TOKEN:-}
     volumes:
       - cbackup_data:/opt/cbackup/data
       - cbackup_logs:/var/log/cbackup
