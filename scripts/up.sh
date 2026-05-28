@@ -6,5 +6,5 @@ if [ ! -f .env ]; then
   echo "Criado .env a partir de .env.example. Edite as senhas antes de produção."
 fi
 
-docker compose up -d --build
+docker compose up -d
 docker compose ps
