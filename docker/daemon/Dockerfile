@@ -105,7 +105,27 @@ RUN mvn -B -U dependency:get \
 # Preenche cache Maven. Se falhar parcialmente, o clean package ainda tenta resolver.
 RUN mvn -B -U -DskipTests dependency:go-offline || true
 
+# Remove o prefixo de script executável do JAR — não usado (daemon roda via "java -jar"),
+# e o prefixo torna o ZIP inválido para edição posterior com zip -d.
+RUN sed -i 's|<executable>true</executable>|<executable>false</executable>|' pom.xml
+
 RUN mvn -B -DskipTests clean package
+
+# JSch 0.1.53 (transitivo via expect4j) não suporta rsa-sha2-256/512 (RFC 8332),
+# causando "Algorithm negotiation fail" em Huawei e outros dispositivos modernos.
+# Substituímos pelo fork API-compatível com.github.mwiede:jsch:0.2.21.
+# Usamos zip -0 (STORED) pois o Spring Boot JarLauncher exige nested JARs sem compressão.
+RUN curl -fsSL "https://repo1.maven.org/maven2/com/github/mwiede/jsch/0.2.21/jsch-0.2.21.jar" \
+        -o /tmp/jsch-0.2.21.jar \
+    && mkdir -p /tmp/jarwork \
+    && cd /tmp/jarwork \
+    && jar xf /build/worker/target/cbackup.jar \
+    && cp META-INF/MANIFEST.MF /tmp/cbackup-MANIFEST.MF \
+    && rm META-INF/MANIFEST.MF BOOT-INF/lib/jsch-*.jar \
+    && cp /tmp/jsch-0.2.21.jar BOOT-INF/lib/jsch-0.2.21.jar \
+    && jar 0cfm /build/worker/target/cbackup.jar /tmp/cbackup-MANIFEST.MF -C /tmp/jarwork . \
+    && echo "jsch patch complete" \
+    && unzip -p /build/worker/target/cbackup.jar META-INF/MANIFEST.MF | grep -E "Main-Class|Start-Class"
 
 FROM eclipse-temurin:8-jre-jammy
 
